@@ -53,7 +53,7 @@
         var markerStyle = new ol.style.Style({
             image: new ol.style.Icon({ // DÜZELTİLDİ: ol.style.Image altında kullanılmalı
                 anchor: [0.5, 1], 
-                src: '../img/record.png', // İşaretçi ikonu
+                src: '../img/circle.png', // İşaretçi ikonu
                 scale: 0.1 // İkon boyutu (gerekirse ayarlanabilir)
             })
         });
@@ -69,6 +69,52 @@
         });
 
         map.addLayer(vectorLayer); // Katmanı haritaya ekle
+
+        // kullanıcının gerçek konumunu alıyoruz
+        if('geolocation' in navigator) {
+            navigator.geolocation.getCurrentPosition(function (position) {
+                var userLon = position.coords.longitude;  
+                var userLat = position.coords.latitude
+
+                console.log("Kullanıcı Konumu:", userLon, userLat);
+
+                var userLocation = ol.proj.fromLonLat([userLon, userLat]);
+
+                var userMarker = new ol.Feature({
+                    geometry: new ol.geom.Point(userLocation)
+                });
+
+                var userMarkerStyle = new ol.style.Style({
+                    image: new ol.style.Icon({
+                        anchor: [0.5,1],
+                        src: '../img/people.png',
+                        scale: 0.1
+                    })
+                });
+
+                userMarker.setStyle(userMarkerStyle);
+
+                var userVectorSource = new ol.source.Vector({
+                    features: [userMarker]
+                });
+
+                var userVectorLayer = new ol.layer.Vector({
+                    source: userVectorSource
+                });
+
+                map.addLayer(userVectorLayer); // kullanıcı konumu da haritaya eklendi
+
+                map.getView().setCenter(userLocation); // kullanıcıya odaklanacak harita
+                map.getView().setZoom(15);
+
+            }, function(error){
+                console.error("Konum alınırken hata oluştu:", error);
+                alert("Konum alınamadı! Tarayıcınızın konum iznini açın.")
+            });
+        } else {
+            alert("Tarayıcınız konum servislerini desteklemiyor.");
+        }
+
 
         // 3️⃣ POPUP EKLE
         var popupElement = document.getElementById('popup');
