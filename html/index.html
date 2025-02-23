@@ -10,7 +10,7 @@
     <style>
         #map {
             width: 100%;
-            height: 500px;
+            height: 700px;
         }
 
         /* Popup CSS */
@@ -53,15 +53,30 @@
         <button id="clearRoute">Rota Temizle</button>
     </div>
 
+    <select id="mapStyle">
+        <option value="osm">🗺️ Normal Harita</option>
+        <option value="esri">🛰️ ESRI Uydu</option>
+    </select>
+
     <script>
-        var apiKey = "APIYI OPENROUTE SİTESİNDEN TEMİN ET"; // openRoute API anaahtarım
+        var apiKey = "APIYI OPENROUTE SITESINDEN TEMIN ET"; // openRoute API anaahtarım
+
+        //openStreetMap katmanı
+        var osmLayer = new ol.layer.Tile({
+            source: new ol.source.OSM()
+        });
+
+        // ESRI uydu katmanı
+        var esriLayer = new ol.layer.Tile({
+            source: new ol.source.XYZ({
+                url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+            })
+        });
+
+
         var map = new ol.Map({  // harita oluştur
             target: 'map',     // html ile bağlanan ksım
-            layers: [          // layer burada ekleniyor
-                new ol.layer.Tile({
-                    source: new ol.source.OSM()
-                })
-            ],
+            layers: [osmLayer],         // layer burada ekleniyor
             view: new ol.View({  // başlangıç konumu ve zoom seviyesi
                 center: ol.proj.fromLonLat([32.8597, 39.9334]), // İstanbul koordinatları
                 zoom: 10
@@ -264,6 +279,14 @@
 
             map.getView().setCenter(ol.proj.fromLonLat([32.8597, 39.9334]));
             map.getView().setZoom(10);
+        });
+
+        // Harite seçimi
+        document.getElementById("mapStyle").addEventListener("change", function () {
+            var selectedLayer = this.value === "osm" ? osmLayer : esriLayer;
+            
+            // Önceki harita katmanını kaldırmadan ilk katmanı değiştiriyoruz
+            map.getLayers().setAt(0, selectedLayer);
         });
 
         // markerı kapatıp açmak için
