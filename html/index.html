@@ -23,14 +23,31 @@
             left: -50px;
             display: none;
         }
+
+        /* Checkbox */
+        .controls {
+            display: inline-block;
+            background: rgb(219, 219, 219);
+            margin-top: 30px;
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
     </style>
 </head>
 <body>
     <h2>OpenLayers Etkileşimli Harita</h2>
+
+
     <div id="map"></div>
 
     <div id="popup" class="ol-popup"></div>
-    
+
+    <div class="controls">
+        <input type="checkbox" id="showCityMarker" checked>
+        <label for="showCityMarker">Ankara Marker'ı Göster</label>
+    </div>
+
     <script>
         var map = new ol.Map({  // harita oluştur
             target: 'map',     // html ile bağlanan ksım
@@ -116,7 +133,18 @@
         }
 
 
-        // 3️⃣ POPUP EKLE
+        // markerı kapatıp açmak için
+        var showCityMarker = document.getElementById("showCityMarker");
+        showCityMarker.addEventListener("change", function() {
+            if(this.checked){
+                map.addLayer(vectorLayer);
+            }
+            else {
+                map.removeLayer(vectorLayer);
+            }
+        });
+
+        // POPUP EKLE
         var popupElement = document.getElementById('popup');
 
         map.on('click', function (event) {
