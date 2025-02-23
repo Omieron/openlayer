@@ -38,7 +38,6 @@
 <body>
     <h2>OpenLayers Etkileşimli Harita</h2>
 
-
     <div id="map"></div>
 
     <div id="popup" class="ol-popup"></div>
@@ -46,6 +45,10 @@
     <div class="controls">
         <input type="checkbox" id="showCityMarker" checked>
         <label for="showCityMarker">Ankara Marker'ı Göster</label>
+    </div>
+
+    <div class="controls">
+        <button id="clearRoute">Rota Temizle</button>
     </div>
 
     <script>
@@ -62,16 +65,16 @@
             })
         });
 
-        // 2️⃣ MARKER (İşaretçi) EKLE
+        // MARKER (İşaretçi) EKLE
         var marker = new ol.Feature({
             geometry: new ol.geom.Point(ol.proj.fromLonLat([32.8597, 39.9334])) // Ankara'nın merkezi
         });
 
         var markerStyle = new ol.style.Style({
-            image: new ol.style.Icon({ // DÜZELTİLDİ: ol.style.Image altında kullanılmalı
+            image: new ol.style.Icon({
                 anchor: [0.5, 1], 
                 src: '../img/circle.png', // İşaretçi ikonu
-                scale: 0.1 // İkon boyutu (gerekirse ayarlanabilir)
+                scale: 0.1
             })
         });
 
@@ -87,7 +90,6 @@
 
         map.addLayer(vectorLayer); // Katmanı haritaya ekle
 
-        // kullanıcının gerçek konumunu alıyoruz
         if('geolocation' in navigator) {
             navigator.geolocation.getCurrentPosition(function (position) {
                 var userLon = position.coords.longitude;  
@@ -132,6 +134,104 @@
             alert("Tarayıcınız konum servislerini desteklemiyor.");
         }
 
+        var points = []; // kordinatların saklanacağı array
+        var routeLayer = null; 
+        var markerLayer = null; 
+
+        map.on('click', function(event) {
+            if (points.length < 2) {  
+                var coordinate = ol.proj.toLonLat(event.coordinate);
+                points.push(coordinate);
+                console.log("Seçilen nokta:", coordinate);
+                
+                clearMap();
+
+                addMarkerForRoute(points);
+
+                if (points.length === 2) {
+                    drawRoute(points[0], points[1]);
+                }
+            }
+        });
+
+        function addMarkerForRoute(points) {
+            var features = points.map(function(point) {
+                return new ol.Feature({
+                    geometry: new ol.geom.Point(ol.proj.fromLonLat(point))
+                });
+            });
+
+            var markerStyle = new ol.style.Style({
+                image: new ol.style.Icon({
+                    anchor: [0.5, 1],
+                    src: '../img/pin.png',
+                    scale: 0.1
+                })
+            });
+
+            features.forEach(feature => feature.setStyle(markerStyle));
+
+            var vectorSource = new ol.source.Vector({
+                features: features
+            });
+
+            markerLayer = new ol.layer.Vector({
+                source: vectorSource
+            });
+
+            map.addLayer(markerLayer);
+        }
+
+        function drawRoute(start, end) { 
+            console.log("Başlangıç Noktası:", start, " Bitiş Noktası:", end);
+
+            var routeFeature = new ol.Feature({
+                geometry: new ol.geom.LineString([
+                    ol.proj.fromLonLat(start),
+                    ol.proj.fromLonLat(end)
+                ])
+            });
+
+            var routeStyle = new ol.style.Style({
+                stroke: new ol.style.Stroke({
+                    color: 'blue',
+                    width: 2
+                })
+            });
+
+            routeFeature.setStyle(routeStyle);
+
+            var routeSource = new ol.source.Vector({
+                features: [routeFeature]
+            });
+
+            routeLayer = new ol.layer.Vector({
+                source: routeSource
+            });
+
+            map.addLayer(routeLayer);
+
+            var extent = routeSource.getExtent();
+            map.getView().fit(extent, { padding: [50, 50, 50, 50] });
+        }
+
+        function clearMap() {
+            if (markerLayer) {
+                map.removeLayer(markerLayer);
+            }
+            if (routeLayer) {
+                map.removeLayer(routeLayer);
+            }
+        }
+
+        // 'Rota Temizle butonuna basılınca'
+        document.getElementById("clearRoute").addEventListener("click", function() {
+            clearMap();
+            points = [];
+
+            map.getView().setCenter(ol.proj.fromLonLat([32.8597, 39.9334]));
+            map.getView().setZoom(10);
+        });
 
         // markerı kapatıp açmak için
         var showCityMarker = document.getElementById("showCityMarker");
