@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -35,6 +36,7 @@
         }
     </style>
 </head>
+
 <body>
     <h2>OpenLayers Etkileşimli Harita</h2>
 
@@ -52,6 +54,7 @@
     </div>
 
     <script>
+        var apiKey = "APIYI OPENROUTE SİTESİNDEN TEMİN ET"; // openRoute API anaahtarım
         var map = new ol.Map({  // harita oluştur
             target: 'map',     // html ile bağlanan ksım
             layers: [          // layer burada ekleniyor
@@ -72,7 +75,7 @@
 
         var markerStyle = new ol.style.Style({
             image: new ol.style.Icon({
-                anchor: [0.5, 1], 
+                anchor: [0.5, 1],
                 src: '../img/circle.png', // İşaretçi ikonu
                 scale: 0.1
             })
@@ -90,9 +93,9 @@
 
         map.addLayer(vectorLayer); // Katmanı haritaya ekle
 
-        if('geolocation' in navigator) {
+        if ('geolocation' in navigator) {
             navigator.geolocation.getCurrentPosition(function (position) {
-                var userLon = position.coords.longitude;  
+                var userLon = position.coords.longitude;
                 var userLat = position.coords.latitude
 
                 console.log("Kullanıcı Konumu:", userLon, userLat);
@@ -105,7 +108,7 @@
 
                 var userMarkerStyle = new ol.style.Style({
                     image: new ol.style.Icon({
-                        anchor: [0.5,1],
+                        anchor: [0.5, 1],
                         src: '../img/people.png',
                         scale: 0.1
                     })
@@ -126,7 +129,7 @@
                 map.getView().setCenter(userLocation); // kullanıcıya odaklanacak harita
                 map.getView().setZoom(15);
 
-            }, function(error){
+            }, function (error) {
                 console.error("Konum alınırken hata oluştu:", error);
                 alert("Konum alınamadı! Tarayıcınızın konum iznini açın.")
             });
@@ -135,27 +138,27 @@
         }
 
         var points = []; // kordinatların saklanacağı array
-        var routeLayer = null; 
-        var markerLayer = null; 
+        var routeLayer = null;
+        var markerLayer = null;
 
-        map.on('click', function(event) {
-            if (points.length < 2) {  
+        map.on('click', function (event) {
+            if (points.length < 2) {
                 var coordinate = ol.proj.toLonLat(event.coordinate);
                 points.push(coordinate);
                 console.log("Seçilen nokta:", coordinate);
-                
+
                 clearMap();
 
                 addMarkerForRoute(points);
 
                 if (points.length === 2) {
-                    drawRoute(points[0], points[1]);
+                    fetchRoute(points[0], points[1]);
                 }
             }
         });
 
         function addMarkerForRoute(points) {
-            var features = points.map(function(point) {
+            var features = points.map(function (point) {
                 return new ol.Feature({
                     geometry: new ol.geom.Point(ol.proj.fromLonLat(point))
                 });
@@ -182,20 +185,15 @@
             map.addLayer(markerLayer);
         }
 
-        function drawRoute(start, end) { 
-            console.log("Başlangıç Noktası:", start, " Bitiş Noktası:", end);
-
+        function drawRoute(routeCoords) {
             var routeFeature = new ol.Feature({
-                geometry: new ol.geom.LineString([
-                    ol.proj.fromLonLat(start),
-                    ol.proj.fromLonLat(end)
-                ])
+                geometry: new ol.geom.LineString(routeCoords)
             });
 
             var routeStyle = new ol.style.Style({
                 stroke: new ol.style.Stroke({
                     color: 'blue',
-                    width: 2
+                    width: 4
                 })
             });
 
@@ -215,6 +213,41 @@
             map.getView().fit(extent, { padding: [50, 50, 50, 50] });
         }
 
+        function fetchRoute(start, end) {
+            console.log("Başlangıç noktası:", start, "Bitiş noktası:", end);
+
+            var startLon = start[0].toFixed(6); // Longitude (Boylam)
+            var startLat = start[1].toFixed(6); // Latitude (Enlem)
+            var endLon = end[0].toFixed(6); // Longitude (Boylam)
+            var endLat = end[1].toFixed(6); // Latitude (Enlem)
+
+            var url = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${apiKey}&start=${startLon},${startLat}&end=${endLon},${endLat}`;
+
+            console.log("📌 API URL:", url);
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("🔍 API YANITI (JSON Tam):", JSON.stringify(data, null, 2));
+
+                    // **"features" dizisi içinde "geometry" ve "coordinates" var!**
+                    if (!data.features || data.features.length === 0) {
+                        console.error("⚠️ API 'features' verisini döndürmedi! Yanıt şu:", data);
+                        alert("API 'features' verisini içermiyor! API'de bir sorun olabilir.");
+                        return;
+                    }
+
+                    var coordinates = data.features[0].geometry.coordinates; // **YENİDEN DÜZENLENDİ!**
+                    var routeCoords = coordinates.map(coord => ol.proj.fromLonLat([coord[0], coord[1]]));
+
+                    drawRoute(routeCoords);
+                })
+                .catch(error => {
+                    console.error("Rota alınırken hata oluştu:", error);
+                    alert(`Rota alınamadı! Hata: ${error.message}`);
+                });
+        }
+
         function clearMap() {
             if (markerLayer) {
                 map.removeLayer(markerLayer);
@@ -225,7 +258,7 @@
         }
 
         // 'Rota Temizle butonuna basılınca'
-        document.getElementById("clearRoute").addEventListener("click", function() {
+        document.getElementById("clearRoute").addEventListener("click", function () {
             clearMap();
             points = [];
 
@@ -235,8 +268,8 @@
 
         // markerı kapatıp açmak için
         var showCityMarker = document.getElementById("showCityMarker");
-        showCityMarker.addEventListener("change", function() {
-            if(this.checked){
+        showCityMarker.addEventListener("change", function () {
+            if (this.checked) {
                 map.addLayer(vectorLayer);
             }
             else {
@@ -248,7 +281,7 @@
         var popupElement = document.getElementById('popup');
 
         map.on('click', function (event) {
-            var feature = map.forEachFeatureAtPixel(event.pixel, function(feature) {
+            var feature = map.forEachFeatureAtPixel(event.pixel, function (feature) {
                 return feature;
             });
 
@@ -265,4 +298,5 @@
 
     </script>
 </body>
+
 </html>
